@@ -1,0 +1,22 @@
+{
+  "numeric_features": [
+    "Engine_size",
+    "Horsepower",
+    "Wheelbase",
+    "Width",
+    "Length",
+    "Curb_weight",
+    "Fuel_capacity",
+    "Fuel_efficiency"
+  ],
+  "categorical_features": [
+    "Vehicle_type"
+  ],
+  "target": "Price_in_thousands",
+  "rmse": 6.754896655787416,
+  "r2_score": 0.7877393876783565,
+  "vehicle_types": [
+    "Car",
+    "Passenger"
+  ]
+}

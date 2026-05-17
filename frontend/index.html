@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CarPrice Prediction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#0a0a0a;--white:#f5f0e8;--yellow:#f5e642;--blue:#1a56ff;
+  --red:#ff2d2d;--green:#00c853;--orange:#ff6b00;--purple:#7c3aed;
+  --bg:#f5f0e8;--card:#ffffff;
+  --b:3px solid #0a0a0a;--b2:2px solid #0a0a0a;
+  --sh:4px 4px 0 #0a0a0a;--sh-lg:6px 6px 0 #0a0a0a;--sh-xl:8px 8px 0 #0a0a0a;
+  --r:4px;--font:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--black);min-height:100vh;overflow-x:hidden}
+
+/* ── LAYOUT ── */
+.page{max-width:1280px;margin:0 auto;padding:0 20px 80px}
+
+/* ── HEADER ── */
+header{border-bottom:var(--b);padding:18px 0;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.logo-box{background:var(--yellow);border:var(--b);padding:8px 16px;font-family:var(--mono);font-weight:700;font-size:22px;box-shadow:var(--sh);letter-spacing:-1px;white-space:nowrap}
+.logo-box span{color:var(--blue)}
+.header-nav{display:flex;gap:0;flex-wrap:wrap}
+.nav-btn{background:var(--card);border:var(--b);border-left:none;padding:10px 22px;font-family:var(--font);font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;color:var(--black);white-space:nowrap;transition:background .1s;text-transform:uppercase;letter-spacing:.5px}
+.nav-btn:first-child{border-left:var(--b)}
+.nav-btn.active,.nav-btn:hover{background:var(--yellow)}
+
+/* ── API STATUS BAR ── */
+.api-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border:var(--b);margin-bottom:24px;background:var(--card);box-shadow:var(--sh);flex-wrap:wrap}
+.api-bar .api-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#666}
+.api-indicator{display:flex;align-items:center;gap:7px;padding:5px 12px;border:var(--b2);border-radius:2px;font-family:var(--mono);font-size:12px;font-weight:700}
+.api-indicator.checking{background:#f0f0f0;color:#888;border-color:#ccc}
+.api-indicator.online{background:#e8fff0;color:#00a040;border-color:#00c853}
+.api-indicator.offline{background:#fff0f0;color:#cc0000;border-color:#ff2d2d}
+.api-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.api-indicator.checking .api-dot{background:#aaa}
+.api-indicator.online .api-dot{background:var(--green);animation:pulse 1.8s infinite}
+.api-indicator.offline .api-dot{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+.api-url-display{font-family:var(--mono);font-size:11px;color:#888;border-left:2px solid #ddd;padding-left:10px;word-break:break-all}
+.api-retry-btn{margin-left:auto;padding:5px 14px;border:var(--b2);background:var(--card);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.api-retry-btn:hover{background:var(--yellow)}
+.api-latency{font-family:var(--mono);font-size:11px;color:#aaa}
+
+/* ── STATS STRIP ── */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);border:var(--b);margin-bottom:28px;box-shadow:var(--sh-lg)}
+.strip-item{padding:16px 18px;border-right:var(--b);background:var(--card);transition:background .15s}
+.strip-item:last-child{border-right:none}
+.strip-item:hover{background:#fffbe6}
+.s-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#888;margin-bottom:5px}
+.s-val{font-family:var(--mono);font-size:22px;font-weight:700}
+.s-val.blue{color:var(--blue)}.s-val.green{color:var(--green)}.s-val.orange{color:var(--orange)}
+.s-sub{font-size:11px;color:#aaa;margin-top:2px}
+
+/* ── TABS ── */
+.tabs{display:flex;border:var(--b);width:fit-content;box-shadow:var(--sh);margin-bottom:28px;flex-wrap:wrap}
+.tab{padding:12px 26px;font-family:var(--font);font-weight:700;font-size:13px;cursor:pointer;border-right:var(--b);background:var(--card);transition:background .1s;user-select:none;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--black);color:var(--yellow)}
+.tab:not(.active):hover{background:var(--yellow)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── SECTION HEAD ── */
+.sec-head{display:flex;align-items:center;gap:0;margin-bottom:20px}
+.sec-num{background:var(--black);color:var(--yellow);font-family:var(--mono);font-weight:700;font-size:16px;padding:8px 14px;border:var(--b);min-width:48px;text-align:center}
+.sec-title{background:var(--yellow);border:var(--b);border-left:none;padding:8px 18px;font-weight:700;font-size:16px;box-shadow:var(--sh)}
+
+/* ── INFO TOTALS ── */
+.info-3{display:grid;grid-template-columns:repeat(3,1fr);border:var(--b);box-shadow:var(--sh);margin-bottom:24px}
+.ic{padding:16px;border-right:var(--b);text-align:center}
+.ic:last-child{border-right:none}
+.ic-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#888;margin-bottom:5px}
+.ic-val{font-family:var(--mono);font-size:26px;font-weight:700}
+.ic-sub{font-size:11px;color:#aaa;margin-top:2px}
+
+/* ── MAIN GRID ── */
+.main-grid{display:grid;grid-template-columns:1fr 400px;gap:24px;align-items:start}
+
+/* ── CARD ── */
+.card{background:var(--card);border:var(--b);box-shadow:var(--sh-lg);padding:24px}
+.card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:18px;padding-bottom:10px;border-bottom:var(--b2)}
+
+/* ── EXAMPLE ROW ── */
+.example-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:var(--b);margin-bottom:20px;box-shadow:var(--sh)}
+.ex-btn{padding:12px 10px;background:var(--card);border:none;border-right:var(--b);cursor:pointer;font-family:var(--font);transition:background .1s;text-align:left}
+.ex-btn:last-child{border-right:none}
+.ex-btn:hover{background:var(--yellow)}
+.ex-btn:active{transform:translate(2px,2px)}
+.ex-name{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-type{font-size:10px;color:#888;margin-top:2px}
+.ex-price{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);margin-top:4px}
+.ex-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border:1.5px solid;border-radius:2px;margin-bottom:2px}
+.ex-badge.rand{background:#e8fff0;color:#00a040;border-color:#00c853}
+
+/* ── PRESET ROW ── */
+.preset-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:var(--b);margin-bottom:20px;box-shadow:var(--sh)}
+.p-btn{padding:12px 10px;background:var(--card);border:none;border-right:var(--b);cursor:pointer;font-family:var(--font);transition:background .1s;text-align:left}
+.p-btn:last-child{border-right:none}
+.p-btn:hover{background:var(--yellow)}
+.p-name{font-weight:700;font-size:12px}.p-type{font-size:10px;color:#888;margin-top:2px}
+.p-price{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);margin-top:4px}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field-full{grid-column:1/-1}
+.field label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#555;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.range-hint{font-family:var(--mono);font-size:10px;font-weight:700;background:#f0f0f0;border:1.5px solid #ddd;padding:1px 6px;border-radius:2px;color:#777;text-transform:none;letter-spacing:0;white-space:nowrap}
+.field input,.field select{background:#fff;border:var(--b2);border-radius:var(--r);padding:10px 12px;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--black);outline:none;transition:box-shadow .1s,border-color .1s;-moz-appearance:textfield;box-shadow:2px 2px 0 var(--black);width:100%}
+.field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none}
+.field input:focus,.field select:focus{border-color:var(--blue);box-shadow:3px 3px 0 var(--blue)}
+.field input.err{border-color:var(--red);box-shadow:2px 2px 0 var(--red)}
+.field input::placeholder{color:#ccc;font-weight:400}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.fhint{font-size:10px;color:var(--red);font-weight:700;display:none;margin-top:1px}
+.fhint.show{display:block}
+
+/* ── BTN ── */
+.btn-calc{width:100%;margin-top:18px;padding:16px;background:var(--black);color:var(--yellow);border:var(--b);border-radius:var(--r);font-family:var(--mono);font-weight:700;font-size:15px;letter-spacing:1.5px;cursor:pointer;box-shadow:var(--sh-lg);transition:transform .1s,box-shadow .1s;text-transform:uppercase}
+.btn-calc:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:var(--sh-xl)}
+.btn-calc:active:not(:disabled){transform:translate(2px,2px);box-shadow:var(--sh)}
+.btn-calc:disabled{opacity:.4;cursor:not-allowed}
+.btn-calc .b-inner{display:flex;align-items:center;justify-content:center;gap:10px}
+.spinner{width:16px;height:16px;border:3px solid rgba(245,230,66,.3);border-top-color:var(--yellow);border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0}
+.btn-calc.loading .spinner{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── ERR BANNER ── */
+.err-banner{background:#fff5f5;border:2px solid var(--red);padding:10px 14px;font-size:12px;font-weight:700;color:var(--red);margin-top:10px;display:none}
+.err-banner.show{display:block}
+
+/* ── RESULT PANEL ── */
+.result-empty{border:2px dashed #ccc;padding:44px 20px;text-align:center;color:#bbb}
+.empty-icon{font-size:44px;display:block;margin-bottom:10px}
+.empty-txt{font-size:13px;font-weight:600;line-height:1.8}
+.result-content{display:none}
+.result-content.show{display:block}
+
+.price-box{background:var(--yellow);border:var(--b);padding:22px;margin-bottom:14px;box-shadow:var(--sh-lg);text-align:center}
+.price-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:6px}
+.price-num{font-family:var(--mono);font-size:38px;font-weight:700;color:var(--black);letter-spacing:-2px;line-height:1;word-break:break-all}
+.price-range{font-size:11px;color:#555;margin-top:6px;font-family:var(--mono)}
+
+.rec-box{background:var(--black);color:var(--white);border:var(--b);padding:14px;margin-bottom:14px}
+.rec-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;opacity:.6;margin-bottom:5px}
+.rec-name{font-family:var(--mono);font-weight:700;font-size:14px;line-height:1.4;color:var(--yellow)}
+.rec-why{font-size:11px;opacity:.75;margin-top:4px;line-height:1.5}
+
+.spec-rows{border:var(--b);margin-bottom:14px}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1.5px solid #eee;font-size:12px;gap:8px}
+.sr:last-child{border-bottom:none}
+.sr-lbl{color:#777;font-weight:600;flex-shrink:0}
+.sr-val{font-family:var(--mono);font-weight:700;text-align:right;word-break:break-word}
+.sr-val.blue{color:var(--blue)}.sr-val.green{color:var(--green)}
+
+.metrics-2{display:grid;grid-template-columns:1fr 1fr;border:var(--b);margin-bottom:14px;box-shadow:var(--sh)}
+.mc{padding:12px;text-align:center;border-right:var(--b)}
+.mc:last-child{border-right:none}
+.mc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:3px}
+.mc-num{font-family:var(--mono);font-size:20px;font-weight:700}
+.mc-num.good{color:var(--green)}.mc-num.ok{color:var(--orange)}
+
+/* ── RANK TABLE ── */
+.rank-wrap{border:var(--b);box-shadow:var(--sh-xl);overflow-x:auto;margin-bottom:24px}
+.rh,.rr{display:grid;grid-template-columns:52px 1fr 110px 100px 80px 80px 80px 80px;min-width:700px}
+.rh{background:var(--black);color:var(--white);font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.rh>div,.rr>div{padding:10px 10px;border-right:1px solid rgba(255,255,255,.08);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.rr>div{border-right:1px solid #eee;font-size:12px;font-weight:600}
+.rh>div:last-child,.rr>div:last-child{border-right:none}
+.rr{border-top:var(--b);background:var(--card);transition:background .12s;cursor:default}
+.rr:hover{background:#fffbe6}
+.rr.r1{background:var(--yellow)!important}.rr.r2{background:#e8e8e8!important}.rr.r3{background:#f5deb3!important}
+.rnum{font-family:var(--mono);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+.car-nm{font-weight:700;font-size:13px}.car-mk{font-size:10px;color:#888;margin-top:1px}
+.bar-w{width:100%;background:#f0f0f0;border:1.5px solid #ddd;height:6px;margin-top:4px;overflow:hidden}
+.bar-f{height:100%;background:var(--blue)}
+.badge{display:inline-block;padding:1px 6px;font-size:10px;font-weight:700;border:1.5px solid var(--black);border-radius:2px}
+.badge-car{background:#dbeafe;color:#1e40af}.badge-pass{background:#dcfce7;color:#166534}
+
+/* ── CREDIT ── */
+.credit{background:var(--black);color:var(--white);border:var(--b);padding:16px;text-align:center;box-shadow:var(--sh);margin-top:14px}
+.credit .c-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin-bottom:5px}
+.credit .c-name{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--yellow)}
+.credit .c-npm{font-size:12px;margin-top:3px;color:var(--yellow)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){.main-grid{grid-template-columns:1fr}}
+@media(max-width:860px){.stats-strip{grid-template-columns:repeat(2,1fr)}.strip-item:nth-child(2){border-right:none}.strip-item:nth-child(3),.strip-item:nth-child(4){border-top:var(--b)}.strip-item:nth-child(4){border-right:none}}
+@media(max-width:660px){.form-grid{grid-template-columns:1fr}.field-full{grid-column:1}.example-row{grid-template-columns:repeat(2,1fr)}.ex-btn:nth-child(2){border-right:none}.ex-btn:nth-child(3){border-top:var(--b)}.ex-btn:nth-child(4){border-top:var(--b);border-right:none}.preset-row{grid-template-columns:1fr}.p-btn{border-right:none;border-bottom:var(--b)}.p-btn:last-child{border-bottom:none}.tabs{width:100%}.tab{flex:1;text-align:center;padding:10px 8px;font-size:11px}.header-nav{display:none}.info-3{grid-template-columns:1fr}.ic{border-right:none;border-bottom:var(--b)}.ic:last-child{border-bottom:none}.metrics-2{grid-template-columns:1fr}.mc{border-right:none;border-bottom:var(--b)}.mc:last-child{border-bottom:none}.price-num{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<header>
+  <div class="logo-box">Car<span>Price</span> Prediction</div>
+  <nav class="header-nav">
+    <a class="nav-btn active" href="#" onclick="switchTab('prediksi');return false">Prediksi</a>
+    <a class="nav-btn" href="#" onclick="switchTab('ranking');return false">Ranking</a>
+  </nav>
+  <div style="display:flex;align-items:center;gap:0">
+    <div style="background:var(--black);color:#aaa;font-family:var(--mono);font-size:10px;font-weight:700;padding:8px 12px;border:var(--b);letter-spacing:1px">API</div>
+    <div id="header-api-badge" style="font-family:var(--mono);font-size:11px;font-weight:700;padding:8px 14px;border:var(--b);border-left:none;box-shadow:var(--sh);background:#f0f0f0;color:#888;display:flex;align-items:center;gap:7px">
+      <span id="header-api-dot" style="width:8px;height:8px;border-radius:50%;background:#aaa;flex-shrink:0;display:inline-block"></span>
+      <span id="header-api-txt">Memeriksa...</span>
+    </div>
+  </div>
+</header>
+
+<!-- API STATUS BAR -->
+<div class="api-bar">
+  <span class="api-lbl">Backend API</span>
+  <div class="api-indicator checking" id="api-indicator">
+    <div class="api-dot"></div>
+    <span id="api-status-text">Memeriksa...</span>
+  </div>
+  <span class="api-latency" id="api-latency"></span>
+  <button class="api-retry-btn" onclick="checkApiStatus()">↺ Cek Ulang</button>
+</div>
+
+<!-- STATS STRIP -->
+<div class="stats-strip">
+  <div class="strip-item">
+    <div class="s-lbl">Algoritma</div>
+    <div class="s-val blue" style="font-size:14px;letter-spacing:0;font-family:var(--font)">Linear Regression</div>
+    <div class="s-sub">sklearn Pipeline</div>
+  </div>
+  <div class="strip-item">
+    <div class="s-lbl">R² Score</div>
+    <div class="s-val green" id="stat-r2">0.7877</div>
+    <div class="s-sub">Akurasi model</div>
+  </div>
+  <div class="strip-item">
+    <div class="s-lbl">RMSE</div>
+    <div class="s-val orange" id="stat-rmse">6.7549</div>
+    <div class="s-sub">Ribu USD</div>
+  </div>
+  <div class="strip-item">
+    <div class="s-lbl">Total Mobil Dataset</div>
+    <div class="s-val" id="stat-total" style="color:var(--purple)">157</div>
+    <div class="s-sub">Unit dalam dataset</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" id="tab-prediksi" onclick="switchTab('prediksi')">✨ Prediksi Harga</div>
+  <div class="tab" id="tab-ranking" onclick="switchTab('ranking')">🏆 Ranking Pembelian</div>
+</div>
+
+<!-- ═══ TAB PREDIKSI ═══ -->
+<div class="tab-content active" id="content-prediksi">
+
+  <div class="info-3">
+    <div class="ic"><div class="ic-lbl">Total Mobil Dataset</div><div class="ic-val" style="color:var(--blue)">157</div><div class="ic-sub">Unit tercatat</div></div>
+    <div class="ic"><div class="ic-lbl">Rentang Harga</div><div class="ic-val">$9K–$85K</div><div class="ic-sub">USD</div></div>
+    <div class="ic"><div class="ic-lbl">Tipe Kendaraan</div><div class="ic-val">2</div><div class="ic-sub">Car & Passenger</div></div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- FORM PANEL -->
+    <div>
+      <div class="sec-head"><div class="sec-num">01</div><div class="sec-title">Input Spesifikasi Mobil</div></div>
+
+      <!-- CONTOH RANDOM -->
+      <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#666">Contoh Acak →</span>
+        <span style="font-size:10px;color:#aaa">(klik untuk isi form dengan data random realistis)</span>
+      </div>
+      <div class="example-row">
+        <button class="ex-btn" onclick="fillRandom()">
+          <div class="ex-badge rand">RANDOM</div>
+          <div class="ex-name">Acak #1</div>
+          <div class="ex-type">Nilai random realistis</div>
+        </button>
+        <button class="ex-btn" onclick="fillRandom()">
+          <div class="ex-badge rand">RANDOM</div>
+          <div class="ex-name">Acak #2</div>
+          <div class="ex-type">Nilai random realistis</div>
+        </button>
+        <button class="ex-btn" onclick="fillRandom()">
+          <div class="ex-badge rand">RANDOM</div>
+          <div class="ex-name">Acak #3</div>
+          <div class="ex-type">Nilai random realistis</div>
+        </button>
+        <button class="ex-btn" onclick="fillRandom()">
+          <div class="ex-badge rand">RANDOM</div>
+          <div class="ex-name">Acak #4</div>
+          <div class="ex-type">Nilai random realistis</div>
+        </button>
+      </div>
+
+      <!-- PRESET SEGMEN -->
+      <div style="margin-bottom:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#666">Preset Segmen →</div>
+      <div class="preset-row">
+        <button class="p-btn" onclick="fillPreset('economy')"><div class="p-name">Economy</div><div class="p-type">Car · Entry Level</div><div class="p-price">~$12,000</div></button>
+        <button class="p-btn" onclick="fillPreset('midsize')"><div class="p-name">Mid-Size</div><div class="p-type">Passenger · Family</div><div class="p-price">~$22,000</div></button>
+        <button class="p-btn" onclick="fillPreset('premium')"><div class="p-name">Premium</div><div class="p-type">Passenger · Luxury</div><div class="p-price">~$45,000</div></button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Spesifikasi Teknis — sesuai variabel notebook</div>
+        <div class="form-grid">
+
+          <div class="field">
+            <label>Engine Size <span class="range-hint">1.0 – 8.0 L</span></label>
+            <input type="number" id="engine_size" placeholder="cth. 2.3" step="0.1" min="1.0" max="8.0"/>
+            <div class="fhint" id="h-engine_size">Nilai: 1.0 – 8.0 L</div>
+          </div>
+
+          <div class="field">
+            <label>Horsepower <span class="range-hint">55 – 450 hp</span></label>
+            <input type="number" id="horsepower" placeholder="cth. 150" step="1" min="55" max="450"/>
+            <div class="fhint" id="h-horsepower">Nilai: 55 – 450 hp</div>
+          </div>
+
+          <div class="field">
+            <label>Wheelbase <span class="range-hint">92.6 – 138.7 in</span></label>
+            <input type="number" id="wheelbase" placeholder="cth. 107" step="0.1" min="92.6" max="138.7"/>
+            <div class="fhint" id="h-wheelbase">Nilai: 92.6 – 138.7 in</div>
+          </div>
+
+          <div class="field">
+            <label>Width <span class="range-hint">62.6 – 79.9 in</span></label>
+            <input type="number" id="width" placeholder="cth. 70" step="0.1" min="62.6" max="79.9"/>
+            <div class="fhint" id="h-width">Nilai: 62.6 – 79.9 in</div>
+          </div>
+
+          <div class="field">
+            <label>Length <span class="range-hint">149.4 – 224.5 in</span></label>
+            <input type="number" id="length" placeholder="cth. 185" step="0.1" min="149.4" max="224.5"/>
+            <div class="fhint" id="h-length">Nilai: 149.4 – 224.5 in</div>
+          </div>
+
+          <div class="field">
+            <label>Curb Weight <span class="range-hint">1.9 – 5.6 k lbs</span></label>
+            <input type="number" id="curb_weight" placeholder="cth. 3.1" step="0.01" min="1.895" max="5.572"/>
+            <div class="fhint" id="h-curb_weight">Nilai: 1.895 – 5.572 k lbs</div>
+          </div>
+
+          <div class="field">
+            <label>Fuel Capacity <span class="range-hint">10.3 – 32.0 gal</span></label>
+            <input type="number" id="fuel_capacity" placeholder="cth. 16" step="0.5" min="10.3" max="32.0"/>
+            <div class="fhint" id="h-fuel_capacity">Nilai: 10.3 – 32.0 gal</div>
+          </div>
+
+          <div class="field">
+            <label>Fuel Efficiency <span class="range-hint">15.0 – 45.0 mpg</span></label>
+            <input type="number" id="fuel_efficiency" placeholder="cth. 27" step="0.5" min="15.0" max="45.0"/>
+            <div class="fhint" id="h-fuel_efficiency">Nilai: 15.0 – 45.0 mpg</div>
+          </div>
+
+          <div class="field field-full">
+            <label>Vehicle Type</label>
+            <select id="vehicle_type">
+              <option value="">-- Pilih Tipe Kendaraan --</option>
+              <option value="Passenger">Passenger</option>
+              <option value="Car">Car</option>
+            </select>
+            <div class="fhint" id="h-vehicle_type">Pilih tipe kendaraan</div>
+          </div>
+
+        </div>
+        <div class="err-banner" id="err-banner"></div>
+        <button class="btn-calc" id="btn-predict" onclick="handlePredict()">
+          <div class="b-inner"><div class="spinner"></div><span>HITUNG HARGA MOBIL</span></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div>
+      <div class="sec-head"><div class="sec-num">02</div><div class="sec-title">Perkiraan Harga Mobil</div></div>
+      <div class="card">
+        <div class="card-title">Hasil Prediksi</div>
+
+        <div class="result-empty" id="result-empty">
+          <span class="empty-icon">🚗</span>
+          <p class="empty-txt">Isi spesifikasi di sebelah kiri<br>atau klik tombol <strong>CONTOH ACAK</strong><br>lalu klik <strong>HITUNG HARGA MOBIL</strong></p>
+        </div>
+
+        <div class="result-content" id="result-content">
+          <div class="price-box">
+            <div class="price-lbl">Estimasi Harga (model.predict)</div>
+            <div class="price-num" id="res-price">$0</div>
+            <div class="price-range">Rentang ±RMSE: <strong id="res-lower">$0</strong> — <strong id="res-upper">$0</strong></div>
+          </div>
+
+          <div class="rec-box">
+            <div class="rec-lbl">Rekomendasi Seri</div>
+            <div class="rec-name" id="rec-name">—</div>
+            <div class="rec-why" id="rec-why">—</div>
+          </div>
+
+          <div class="spec-rows">
+            <div class="sr"><span class="sr-lbl">Engine Size</span><span class="sr-val blue" id="res-engine">—</span></div>
+            <div class="sr"><span class="sr-lbl">Horsepower</span><span class="sr-val blue" id="res-hp">—</span></div>
+            <div class="sr"><span class="sr-lbl">Wheelbase</span><span class="sr-val" id="res-wb">—</span></div>
+            <div class="sr"><span class="sr-lbl">Width × Length</span><span class="sr-val" id="res-dim">—</span></div>
+            <div class="sr"><span class="sr-lbl">Curb Weight</span><span class="sr-val" id="res-cw">—</span></div>
+            <div class="sr"><span class="sr-lbl">Fuel Efficiency</span><span class="sr-val green" id="res-fe">—</span></div>
+            <div class="sr"><span class="sr-lbl">Vehicle Type</span><span class="sr-val" id="res-vt">—</span></div>
+          </div>
+
+          <div class="metrics-2">
+            <div class="mc"><div class="mc-lbl">R² Score</div><div class="mc-num good" id="res-r2">—</div></div>
+            <div class="mc"><div class="mc-lbl">RMSE (ribu USD)</div><div class="mc-num ok" id="res-rmse">—</div></div>
+          </div>
+        </div>
+
+        <div class="credit">
+          <div class="c-lbl">Sistem ini dibuat oleh</div>
+          <div class="c-name">Ghufron Faishal Ihsan</div>
+          <div class="c-npm">NPM: 237006114</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ TAB RANKING ═══ -->
+<div class="tab-content" id="content-ranking">
+  <div class="sec-head" style="margin-bottom:16px"><div class="sec-num">TOP</div><div class="sec-title">10 Mobil Terlaris — Ranking Pembelian</div></div>
+
+  <div class="info-3" style="margin-bottom:20px">
+    <div class="ic"><div class="ic-lbl">Penjualan Tertinggi</div><div class="ic-val" style="color:var(--blue)">540K</div><div class="ic-sub">Ford F-Series</div></div>
+    <div class="ic"><div class="ic-lbl">Avg. Harga Top 10</div><div class="ic-val">$18.6K</div><div class="ic-sub">Ribu USD</div></div>
+    <div class="ic"><div class="ic-lbl">Dominan Tipe</div><div class="ic-val" style="font-size:18px;font-family:var(--font)">Car</div><div class="ic-sub">6 dari 10 mobil</div></div>
+  </div>
+
+  <div class="rank-wrap">
+    <div class="rh">
+      <div>#</div><div>Model Mobil</div><div>Penjualan</div>
+      <div>Harga</div><div>Tipe</div>
+      <div>HP</div><div>Engine</div><div>Fuel Eff.</div>
+    </div>
+    <div id="rank-body"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const API_BASE = "http://localhost:8000";
+let apiOnline = false;
+let pingInterval = null;
+
+//API realtime check
+async function checkApiStatus() {
+  const ind = document.getElementById("api-indicator");
+  const txt = document.getElementById("api-status-text");
+  const lat = document.getElementById("api-latency");
+  ind.className = "api-indicator checking";
+  txt.textContent = "Memeriksa...";
+  lat.textContent = "";
+  const t0 = Date.now();
+  try {
+    const r = await fetch(`${API_BASE}/`, { signal: AbortSignal.timeout(4000) });
+    const ms = Date.now() - t0;
+    if (r.ok) {
+      ind.className = "api-indicator online";
+      txt.textContent = "Online";
+      lat.textContent = `${ms}ms`;
+      apiOnline = true;
+      loadModelInfo();
+      // sync header badge
+      setHeaderBadge('online', `Online · ${ms}ms`);
+    } else { throw new Error("not ok"); }
+  } catch {
+    ind.className = "api-indicator offline";
+    txt.textContent = "Offline (Demo Mode)";
+    lat.textContent = "";
+    apiOnline = false;
+    setHeaderBadge('offline', 'Offline');
+  }
+}
+
+async function loadModelInfo() {
+  try {
+    const r = await fetch(`${API_BASE}/model-info`);
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById("stat-r2").textContent   = d.r2_score.toFixed(4);
+    document.getElementById("stat-rmse").textContent  = d.rmse.toFixed(4);
+  } catch {}
+}
+
+//Realtime interval: ping setiap 15 detik
+function setHeaderBadge(state, txt) {
+  const badge = document.getElementById('header-api-badge');
+  const dot   = document.getElementById('header-api-dot');
+  const label = document.getElementById('header-api-txt');
+  if (!badge) return;
+  if (state === 'online') {
+    badge.style.background = '#e8fff0'; badge.style.color = '#00a040';
+    dot.style.background = '#00c853'; dot.style.animation = 'pulse 1.8s infinite';
+  } else if (state === 'offline') {
+    badge.style.background = '#fff0f0'; badge.style.color = '#cc0000';
+    dot.style.background = '#ff2d2d'; dot.style.animation = '';
+  } else {
+    badge.style.background = '#f0f0f0'; badge.style.color = '#888';
+    dot.style.background = '#aaa'; dot.style.animation = '';
+  }
+  label.textContent = txt;
+}
+
+function startPing() {
+  checkApiStatus();
+  pingInterval = setInterval(checkApiStatus, 15000);
+}
+
+//Limits (sesuai dataset, identik dengan notebook cell 24 & backend)
+const LIMITS = {
+  engine_size:     { min: 1.0,   max: 8.0,   step: 0.1  },
+  horsepower:      { min: 55,    max: 450,    step: 1    },
+  wheelbase:       { min: 92.6,  max: 138.7,  step: 0.1  },
+  width:           { min: 62.6,  max: 79.9,   step: 0.1  },
+  length:          { min: 149.4, max: 224.5,  step: 0.1  },
+  curb_weight:     { min: 1.895, max: 5.572,  step: 0.01 },
+  fuel_capacity:   { min: 10.3,  max: 32.0,   step: 0.5  },
+  fuel_efficiency: { min: 15.0,  max: 45.0,   step: 0.5  },
+};
+
+//PRESETS
+const PRESETS = {
+  economy: { engine_size:1.6, horsepower:110, wheelbase:99,  width:66,   length:170,   curb_weight:2.5,  fuel_capacity:13,  fuel_efficiency:34, vehicle_type:"Car"       },
+  midsize: { engine_size:2.3, horsepower:150, wheelbase:107, width:70,   length:185,   curb_weight:3.1,  fuel_capacity:16,  fuel_efficiency:27, vehicle_type:"Passenger" },
+  premium: { engine_size:3.5, horsepower:280, wheelbase:115, width:74,   length:197,   curb_weight:3.8,  fuel_capacity:20,  fuel_efficiency:20, vehicle_type:"Passenger" },
+};
+
+//Notebook cell 24: rekomendasi specs dari top10 mean
+const RECOMMENDED_SPECS = { engine_size:2.98, horsepower:156.5, wheelbase:114.64, width:72.22, length:195.12, curb_weight:3.34, fuel_capacity:18.88, fuel_efficiency:24.1, vehicle_type:"Car" };
+
+function rnd(min, max, decimals) {
+  const v = min + Math.random() * (max - min);
+  return parseFloat(v.toFixed(decimals));
+}
+
+//Generate random realistic values within dataset bounds
+function makeRandom() {
+  const vt = Math.random() > 0.5 ? "Passenger" : "Car";
+  return {
+    engine_size:     rnd(LIMITS.engine_size.min,     LIMITS.engine_size.max,     1),
+    horsepower:      rnd(LIMITS.horsepower.min,       LIMITS.horsepower.max,      0),
+    wheelbase:       rnd(LIMITS.wheelbase.min,        LIMITS.wheelbase.max,       1),
+    width:           rnd(LIMITS.width.min,            LIMITS.width.max,           1),
+    length:          rnd(LIMITS.length.min,           LIMITS.length.max,          1),
+    curb_weight:     rnd(LIMITS.curb_weight.min,      LIMITS.curb_weight.max,     2),
+    fuel_capacity:   rnd(LIMITS.fuel_capacity.min,    LIMITS.fuel_capacity.max,   1),
+    fuel_efficiency: rnd(LIMITS.fuel_efficiency.min,  LIMITS.fuel_efficiency.max, 1),
+    vehicle_type:    vt,
+  };
+}
+
+//Fill form with random values 
+function fillRandom() {
+  const v = makeRandom();
+  Object.entries(v).forEach(([k, val]) => {
+    const el = document.getElementById(k);
+    if (el) el.value = val;
+  });
+  clearAllErrors();
+  updateExamplePrices();
+}
+
+// Update example button price estimates (demo formula) 
+function estimatePrice(spec) {
+  const p = (spec.Engine_size||spec.engine_size||2)*4.5 + (spec.Horsepower||spec.horsepower||100)*0.1 +
+            (spec.Wheelbase||spec.wheelbase||100)*0.05 + (spec.Curb_weight||spec.curb_weight||3)*2 +
+            (50 - (spec.Fuel_efficiency||spec.fuel_efficiency||25))*0.25 +
+            ((spec.Vehicle_type||spec.vehicle_type) === "Passenger" ? 2 : 0);
+  return Math.max(9, p);
+}
+
+function updateExamplePrices() {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById(`ex${i}-price`);
+    if (el) {
+      const s = makeRandom();
+      const p = estimatePrice(s);
+      el.textContent = `~$${Math.round(p*1000).toLocaleString()}`;
+    }
+  }
+}
+
+function fillPreset(key) {
+  const p = PRESETS[key];
+  Object.entries(p).forEach(([k, v]) => { const el = document.getElementById(k); if (el) el.value = v; });
+  clearAllErrors();
+}
+
+//Validate
+function clearAllErrors() {
+  document.getElementById("err-banner").classList.remove("show");
+  document.getElementById("err-banner").style = "";
+  Object.keys(LIMITS).forEach(k => {
+    document.getElementById("h-"+k)?.classList.remove("show");
+    document.getElementById(k)?.classList.remove("err");
+  });
+  document.getElementById("h-vehicle_type")?.classList.remove("show");
+  document.getElementById("vehicle_type")?.classList.remove("err");
+}
+
+function validateAll() {
+  let ok = true;
+  Object.entries(LIMITS).forEach(([k, {min, max}]) => {
+    const el = document.getElementById(k);
+    const v  = parseFloat(el?.value);
+    if (!el || el.value.trim() === "" || isNaN(v) || v < min || v > max) {
+      document.getElementById("h-"+k)?.classList.add("show");
+      el?.classList.add("err");
+      ok = false;
+    } else {
+      document.getElementById("h-"+k)?.classList.remove("show");
+      el?.classList.remove("err");
+    }
+  });
+  const vt = document.getElementById("vehicle_type");
+  if (!vt?.value) {
+    document.getElementById("h-vehicle_type")?.classList.add("show");
+    vt?.classList.add("err");
+    ok = false;
+  }
+  return ok;
+}
+
+//Recommendation logic ──────────────────────────────────────────────────────
+function getRecommendation(priceUSD) {
+  const p = priceUSD / 1000;
+  if (p < 14) return { name:"Economy / City Car Segment",         why:"Cocok untuk Honda Civic, Ford Focus, atau Ford Ranger. Pasar volume tinggi dengan harga entry-level." };
+  if (p < 22) return { name:"Mid-Size Sedan / Family Passenger",  why:"Cocok untuk Toyota Camry, Honda Accord, atau Ford Taurus. Segmen paling populer di dataset." };
+  if (p < 35) return { name:"SUV / Pickup / Upper Mid-Size",      why:"Cocok untuk Ford Explorer, Dodge Ram Pickup, atau Dodge Caravan. Kendaraan utility tinggi." };
+  if (p < 55) return { name:"Premium / Luxury Segment",           why:"Cocok untuk BMW 3 Series, Mercedes C-Class, atau Lexus ES. Spesifikasi premium dengan fitur lengkap." };
+  return         { name:"Ultra Premium / Performance Luxury",     why:"Cocok untuk BMW 7 Series, Mercedes S-Class, atau Jaguar XJ. Segmen eksklusif performa tinggi." };
+}
+
+//Predict
+async function handlePredict() {
+  clearAllErrors();
+  if (!validateAll()) { document.getElementById("err-banner").textContent="⚠️ Periksa kembali input yang ditandai merah."; document.getElementById("err-banner").classList.add("show"); return; }
+
+  const btn = document.getElementById("btn-predict");
+  btn.disabled = true; btn.classList.add("loading");
+
+  const payload = {
+    Engine_size:     parseFloat(document.getElementById("engine_size").value),
+    Horsepower:      parseFloat(document.getElementById("horsepower").value),
+    Wheelbase:       parseFloat(document.getElementById("wheelbase").value),
+    Width:           parseFloat(document.getElementById("width").value),
+    Length:          parseFloat(document.getElementById("length").value),
+    Curb_weight:     parseFloat(document.getElementById("curb_weight").value),
+    Fuel_capacity:   parseFloat(document.getElementById("fuel_capacity").value),
+    Fuel_efficiency: parseFloat(document.getElementById("fuel_efficiency").value),
+    Vehicle_type:    document.getElementById("vehicle_type").value,
+  };
+
+  try {
+    const r = await fetch(`${API_BASE}/predict`, {
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || "Server error"); }
+    showResult(await r.json(), payload);
+  } catch (e) {
+    if (e.message.includes("fetch") || e.message.includes("NetworkError") || e.name === "TimeoutError") {
+      showDemoResult(payload);
+    } else {
+      const b = document.getElementById("err-banner"); b.textContent = "⚠️ " + e.message; b.classList.add("show");
+    }
+  } finally {
+    btn.disabled = false; btn.classList.remove("loading");
+  }
+}
+
+function fmt(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+
+function showResult(data, payload) {
+  document.getElementById("result-empty").style.display = "none";
+  document.getElementById("result-content").classList.add("show");
+  document.getElementById("res-price").textContent  = fmt(data.predicted_price_usd);
+  document.getElementById("res-lower").textContent  = fmt(data.estimated_lower_usd);
+  document.getElementById("res-upper").textContent  = fmt(data.estimated_upper_usd);
+  document.getElementById("res-engine").textContent = payload.Engine_size + " L";
+  document.getElementById("res-hp").textContent     = payload.Horsepower + " hp";
+  document.getElementById("res-wb").textContent     = payload.Wheelbase + " in";
+  document.getElementById("res-dim").textContent    = payload.Width + " × " + payload.Length + " in";
+  document.getElementById("res-cw").textContent     = payload.Curb_weight + " k lbs";
+  document.getElementById("res-fe").textContent     = payload.Fuel_efficiency + " mpg";
+  document.getElementById("res-vt").textContent     = payload.Vehicle_type;
+  document.getElementById("res-r2").textContent     = data.r2_score;
+  document.getElementById("res-rmse").textContent   = data.rmse ?? data.rmse_thousand_usd ?? "6.7549";
+  const rec = getRecommendation(data.predicted_price_usd);
+  document.getElementById("rec-name").textContent = rec.name;
+  document.getElementById("rec-why").textContent  = rec.why;
+}
+
+function showDemoResult(payload) {
+  const rmse = 6.7549;
+  const pred = Math.max(9, estimatePrice(payload));
+  showResult({ predicted_price_usd: pred*1000, estimated_lower_usd: Math.max(0,pred-rmse)*1000, estimated_upper_usd:(pred+rmse)*1000, r2_score:0.7877, rmse:rmse }, payload);
+  const b = document.getElementById("err-banner");
+  b.textContent = "⚠️ Demo Mode: Backend offline. Jalankan FastAPI (python main.py) untuk prediksi akurat dari model.";
+  b.style.cssText = "display:block;background:#fff8f0;border-color:var(--orange);color:var(--orange)";
+}
+
+// ── TOP 10 DATA — sesuai notebook cell 18 sort_values Sales_in_thousands
+const TOP10 = [
+  {rank:1, make:"Ford",   model:"F-Series",   sales:540.561, price:26.935, type:"Car",       hp:220, engine:4.6, fe:18},
+  {rank:2, make:"Ford",   model:"Explorer",   sales:276.747, price:31.930, type:"Car",       hp:210, engine:4.0, fe:19},
+  {rank:3, make:"Toyota", model:"Camry",      sales:247.994, price:17.518, type:"Passenger", hp:133, engine:2.2, fe:27},
+  {rank:4, make:"Ford",   model:"Taurus",     sales:245.815, price:17.885, type:"Passenger", hp:155, engine:3.0, fe:24},
+  {rank:5, make:"Honda",  model:"Accord",     sales:230.902, price:15.350, type:"Passenger", hp:135, engine:2.3, fe:27},
+  {rank:6, make:"Dodge",  model:"Ram Pickup", sales:227.061, price:19.460, type:"Car",       hp:230, engine:5.2, fe:17},
+  {rank:7, make:"Ford",   model:"Ranger",     sales:220.650, price:12.050, type:"Car",       hp:119, engine:2.5, fe:23},
+  {rank:8, make:"Honda",  model:"Civic",      sales:199.685, price:12.885, type:"Passenger", hp:106, engine:1.6, fe:32},
+  {rank:9, make:"Dodge",  model:"Caravan",    sales:181.749, price:19.565, type:"Car",       hp:150, engine:2.4, fe:24},
+  {rank:10,make:"Ford",   model:"Focus",      sales:175.670, price:12.315, type:"Passenger", hp:107, engine:2.0, fe:30},
+];
+
+function buildRank() {
+  const MAX = 540.561;
+  document.getElementById("rank-body").innerHTML = TOP10.map(c => {
+    const cls = c.rank===1?"rr r1":c.rank===2?"rr r2":c.rank===3?"rr r3":"rr";
+    const pct = (c.sales/MAX*100).toFixed(1);
+    const badge = c.type==="Car"?`<span class="badge badge-car">Car</span>`:`<span class="badge badge-pass">Pass</span>`;
+    return `<div class="${cls}">
+      <div class="rnum">${c.rank}</div>
+      <div><div class="car-nm">${c.make} ${c.model}</div><div class="car-mk">${c.sales.toFixed(1)}K · ${pct}% share</div><div class="bar-w"><div class="bar-f" style="width:${pct}%"></div></div></div>
+      <div style="font-family:var(--mono);font-weight:700;color:var(--blue)">${c.sales.toFixed(1)}K</div>
+      <div style="font-family:var(--mono);font-weight:700">$${(c.price*1000).toLocaleString()}</div>
+      <div>${badge}</div>
+      <div>${c.hp} hp</div>
+      <div>${c.engine} L</div>
+      <div>${c.fe} mpg</div>
+    </div>`;
+  }).join("");
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab-content").forEach(e=>e.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(e=>e.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(e=>e.classList.remove("active"));
+  document.getElementById("content-"+tab).classList.add("active");
+  document.getElementById("tab-"+tab).classList.add("active");
+}
+
+buildRank();
+updateExamplePrices();
+startPing();
+</script>
+</body>
+</html>
