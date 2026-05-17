@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import os
 import joblib
 import numpy as np
 import pandas as pd
@@ -129,4 +130,5 @@ def predict(spec: CarSpec):
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
